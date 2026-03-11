@@ -39,7 +39,7 @@ training:
   save_steps: 100
   eval_steps: 100
   save_total_limit: 3
-  evaluation_strategy: "steps"
+  eval_strategy: "steps"
   load_best_model_at_end: true
   report_to: "wandb"                  # 或 "none"
   seed: 42
