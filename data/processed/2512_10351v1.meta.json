@@ -1,0 +1,17 @@
+{
+  "paper_id": "2512_10351v1",
+  "abstract": "Quantum key distribution (QKD) systems require optimal performance of both quantum and classical channels\\textemdash utilizing as few as possible qubits and bits for establishing as many as possible key bits. Here we report a way to determine if a quantum key distribution model (or protocol) operates in an optimal behavior. This is accomplished by introducing a quantity, called \\textit{optimality}, which is the maximum over the total efficiency of a QKD under any circumstances (any values of QKD",
+  "num_sections": 9,
+  "section_titles": [
+    "Introduction",
+    "BB84-QKD",
+    "Optimality",
+    "Optimality Evaluation",
+    "Compression",
+    "Optimal QKD protocols",
+    "Summary",
+    "Example of channel squeezing",
+    "Example of another appendix section"
+  ],
+  "char_count": 54048
+}

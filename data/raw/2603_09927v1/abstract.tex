@@ -1,0 +1,8 @@
+\begin{abstract}
+This paper demonstrates that adopting out-of-place writes is essential for database systems to fully leverage SSD performance and extend SSD lifespan.
+We propose a set of out-of-place optimizations that collectively reduce write amplification across both the DBMS and SSD layers.
+We redesign the in-place, B-tree-based LeanStore to write out-of-place and support these optimizations, and evaluate it on diverse OLTP benchmarks, dataset sizes, and SSDs.
+The final design improves throughput by 1.65--2.24$\times$ and reduces flash writes per transaction by 6.2--9.8$\times$ on YCSB-A.
+On TPC-C with 15{,}000 warehouses, throughput improves by 2.45$\times$ while flash writes decrease by 7.2$\times$.
+Finally, we show that the architecture can seamlessly support novel SSD interfaces such as ZNS and FDP.
+\end{abstract}

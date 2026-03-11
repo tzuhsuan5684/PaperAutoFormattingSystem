@@ -1,0 +1,65 @@
+\section{Methods}
+
+\input{virtual_environments.tex}
+
+We refined the AI guide prototype from our previous design \cite{collins2024ai}, implementing specific changes (such as specific personas and re-engineered prompts) to study its use. We recruited BLV participants and observed them performing individual and social tasks in virtual environments using the guide. Finally, we conducted interviews about participants’ VR experience.
+
+\subsection{Participants}
+
+We recruited 16 participants (see Table \ref{tab: Participants}) through a partner organization, the LightHouse for the Blind and Visually Impaired in San Francisco, which provides services to BLV individuals. Participants were eligible for our study if they identified as blind or low vision, were at least 18 years old, could travel for an in-person study, and met the Meta Quest Health and Safety Guidelines \cite{guidelines}. Each participant was compensated \$100. Participants’ ages ranged from 22 to 75 (SD = 14.23, 7 women, 9 men). Eight participants identified as low vision and eight as blind. All procedures were approved by our university’s Institutional Review Board.
+
+\input{participants.tex}
+
+\subsection{Procedure} \label{sec: Procedure}
+
+We conducted a single, 90-minute study session with each participant at a conference room provided by LightHouse. Each session comprised three parts: a VR tutorial, two rounds of VR tasks, and a semi-structured interview. During the VR tutorial, participants explored the AI guide’s features in its human persona. Participants then completed the VR tasks using the dog and the robot personas (see section \ref{sec: Prototype Design and Implementation} for explanation of personas). These tasks were counterbalanced so that each participant experienced both personas as well as different environments (see Table \ref{tab: Counterbalancing Procedures} for detailed counterbalancing and study procedures).
+
+\input{procedure.tex}
+
+The tutorial began in a simple square room filled with primitive 3D objects. This introduction allowed participants to become familiar with the VR platform and the AI guide controls. Participants learned to move around the room, pick up objects, and call their guide. The tutorial concluded once participants felt comfortable with these basic interactions.
+
+Participants then proceeded to the first of two VR tasks: exploring a virtual park with the AI guide. The goal of this task was to observe use of a guide in \textit{individual} settings. Participants were placed in one of two virtual environments modeled after parks from our study on human guides (see section \ref{sec: Prototype Design and Implementation}) \cite{collins2023guide}. Participants were asked to familiarize themselves with key landmarks (e.g., gazebos, a river). This task ended after ten minutes or once the participant indicated they were comfortable with the park contents.
+
+The second task required participants to give a tour of the same park to two joining researchers acting as confederates. This task was designed to observe guide use in \textit{social} settings, where participants had to balance their use of the guide with social interaction. Participants were instructed to answer any questions from the confederates and lead them to at least two park landmarks. This task concluded after fifteen minutes or once they had completed the tour. Participants then repeated both tasks in a different park with a new guide persona.
+
+Throughout the entire study, confederates used human avatars matching their preferred gender. To standardize confederate behavior, senior researchers on the team developed behavioral guidelines (included in supplementary materials). For example, the guidelines instructed confederates to pretend to be sighted participants of a different study who were unfamiliar with the guide. We implemented this to avoid influencing participants’ guide usage if they believed the confederates were experienced with it. In addition, the guidelines provided examples of questions and topics to discuss (e.g., the guide, the parks, hobbies) to ensure natural interaction. They also included instructions for movement throughout the study, such as pre-determined rendezvous points with participants, best practices for following participants, and examples of natural body language or gestures to use.
+
+%\input{figures/virtual_environments}
+
+We concluded our study with a 30-minute semi-structured interview. Participants responded to Likert-scale statements (rated 1 to 5; see Figure \ref{fig: Likert Guide Ratings}) and answered open-ended questions across nine categories: usability, usefulness, joy of use, social comfort, scene understanding, object perception, navigation, appearance, and areas for improvement. Example questions included:
+
+\begin{itemize}
+	\item \textbf{“Which of the guide personas did you prefer using? Why?”}
+	\item \textbf{“Were there any tasks you felt the guide struggled to assist you with?”}
+	\item \textbf{“How effective were the guide’s descriptions of the scenes you were in?”}
+\item \textbf{“How do you believe the guide impacted others’ perceptions of you?”}
+\end{itemize}
+
+\subsection{Prototype Design and Implementation} \label{sec: Prototype Design and Implementation}
+
+We refined our original design of an AI guide \cite{collins2024ai}, incorporating specific changes informed by pilot studies in our current work.
+
+Our refined AI guide offered three primary capabilities of the original guide: (1) providing \textbf{visual descriptions} of the environment, (2) assisting users in \textbf{moving their avatars} to specified locations or objects upon request, and (3) placing spatialized \textbf{audio beacons} on objects to aid in orientation. Users could activate or mute the guide using the secondary buttons on their VR controllers. They interacted with the guide via specific (e.g. “Take me to the Northern Fountain”) or vague (e.g., “What is this bluish-gray blob in front of me?”) voice commands.
+
+\input{personas.tex}
+
+In our original work, we also proposed six guide “personas,” or combinations of different appearances and personalities, to provide varied guidance experiences. While a comprehensive evaluation of all personas is an area for future research, our objective was to evaluate the AI guide's core functionality, so we implemented only three within our refined guide: the dog, the robot, and the human (see Table \ref{tab: Guide Personas}). We selected the dog because it is a familiar physical-world guide form that also serves as a disability signifier. We chose the robot to be a fantastical form representative of the unique experiences possible in VR. Finally, we used the human for the tutorial, as its similarity to a human sighted guide facilitated an easier transition to the VR framework. We named all personas "Giddy," unlike the original AI guide which had no name. This decision—intended to give the guide a simple, short, and androgynous name—was based on suggestions from BLV participants in pilot studies informing our updated AI guide design.
+
+To replicate the initial guidance experience from our human guide study, we re-utilized two virtual park environments from that study \cite{collins2023guide}. The first park had a calm environment with a square pathway and a river, while the second was more lively, featuring a complex pathway and a group of dancers. We also included a tutorial environment with simplistic objects for training purposes (see Figure \ref{fig: Virtual Environments}).
+
+We implemented our VR prototype in Unity, following our original specifications from Collins et al. \cite{collins2024ai}. Navigation relied on Unity's NavMesh and NavAgents pathfinding components, and user queries were processed via OpenAI APIs. We used OpenAI's Speech-to-Text model, Whisper, to convert verbal queries to text, which was then sent to GPT-4 along with environment screenshots captured at the time of the query and hosted in a temporary image server. The guide then sorted these queries into five categories with different output types and used descriptors to embody the intended persona. To assess system responsiveness, we defined and recorded the guide's response time as the duration from the end of the user's speech input to the start of the guide's audio output. Finally, we built our prototype on a Meta Quest 2. Utilizing a visually-dominant VR headset presents a potential tradeoff of increasing cognitive load or physical discomfort for BLV users experiencing it as an audio-centric system. However, we chose this hardware to ensure the prototype's compatibility with standard, widely-available commercial VR ecosystems and consumer VR experiences.
+
+Prior to deployment, we investigated several Speech-to-Text models for their robustness, including Google's Speech-to-Text API and Microsoft’s Azure AI Speech. We selected OpenAI’s Whisper due to its integration within the same API services as GPT-4 (also from OpenAI). This unified architecture allowed for more seamless data transfer between our STT and LLM endpoints, resulting in lower operational costs and lower end-to-end latency during pilot testing. Ultimately, Whisper performed adequately for our general population.
+
+In addition to the basic prompt structure from our prior work, we developed a new prompt section based on pilot study feedback. This section instructed GPT-4 to write responses specifically for a blind user, incorporating best practices identified by our BLV pilot participants. These practices included using distances, cardinal directions, and references to the user's position relative to known objects. We also limited responses to 200 words or less to prevent overwhelming the user with extraneous detail, a limitation not imposed in our prior work. Finally, the guide was instructed to structure its responses directly to the user, as sometimes, it would reply as if to an unknown third party. The full prompt is available in our supplemental materials.
+
+\subsection{Data and Analysis}
+We collected video recordings of the VR tasks and audio recordings of the semi-structured interviews. Four researchers then transcribed and coded these recordings using a mixed-methods approach.
+
+First, three researchers coded a transcript with closed codes to: (1) tally the number of participant-guide interactions and the guide’s correct responses, and (2) note types of interactions between the participant and guide, following interaction categorizations from our human guide study \cite{collins2023guide}. Discrepancies were discussed and a consensus reached before dividing remaining transcripts for coding. The closed codes were analyzed separately to complement the qualitative findings.
+
+For the qualitative data, two researchers coded a transcript with open codes to create an initial codebook, which was then applied to the remaining transcripts. This was followed by an inductive thematic analysis \cite{clarke2017thematic, braun2019reflecting} using affinity diagramming to identify emerging themes.
+
+As part of coding interactions, researchers needed to classify the tones in which participants addressed the guide. We initially used tone categories from our previous work with the human guide (utilitarian, friendly, respectful, apologetic, and uncertain) \cite{collins2023guide}. However, after finding no instances of behaviors like apologizing or deferring expertise, we reduced the categories to utilitarian, friendly, and polite. We reclassified "respectful" to "polite" based on coder consensus that participants were not offering consistent respect, but using occasional polite markers like "please" and "thank you." We classified any queries where participants used such phrases as “polite.”
+
+To classify friendly and utilitarian speech, we deferred to external sources on social dynamics and linguistics. We defined “friendly” queries based on behaviors that foster social connection \cite{angelo2015, goodwin1990}. For example, studies on social dynamics note that using a person's name or offering greetings demonstrates friendliness or connection \cite{angelo2015, goodwin1990}. Thus, we classified queries where participants used the guide’s name, a nickname, or greeted the guide before asking questions as “friendly” interactions. Conversely, a “utilitarian” tone was defined by language that ordered the guide to perform actions without social markers. Following linguistic classifications of imperative language \cite{kaufmann2011}, we identified utilitarian queries by their sentence structures, which manifested as orders, commands, or requests with no polite or friendly alterations.

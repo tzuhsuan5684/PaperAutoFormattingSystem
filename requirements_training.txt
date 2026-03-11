@@ -1,0 +1,20 @@
+# ── 訓練環境（建議在 Colab / GPU 環境安裝）─────────────────
+# 先安裝 unsloth（須對應 CUDA 版本）
+# pip install "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git"
+
+torch>=2.2.0
+transformers>=4.41.0
+trl>=0.9.0
+peft>=0.11.0
+bitsandbytes>=0.43.0   # 4-bit quantization
+accelerate>=0.30.0
+datasets>=2.19.0
+evaluate>=0.4.2
+
+# ── 評估 ──────────────────────────────────────────────────
+rouge-score>=0.1.2
+nltk>=3.8.1
+
+# ── 量化（Week 6）─────────────────────────────────────────
+# autoawq>=0.2.5        # AWQ quantization
+# llama-cpp-python      # GGUF inference

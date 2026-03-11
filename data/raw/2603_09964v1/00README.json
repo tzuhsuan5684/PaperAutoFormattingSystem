@@ -1,0 +1,21 @@
+{
+   "sources" : [
+      {
+         "usage" : "toplevel",
+         "filename" : "Understanding_the_Use_of_a_Large_Language_Model-Powered_Guide_to_Make_Virtual_Reality_Accessible_for_Blind_and_Low_Vision_People.tex"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "anc/confederate_guidelines.pdf"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "anc/prompt_examples.pdf"
+      }
+   ],
+   "spec_version" : 1,
+   "texlive_version" : "2025",
+   "process" : {
+      "compiler" : "pdflatex"
+   }
+}

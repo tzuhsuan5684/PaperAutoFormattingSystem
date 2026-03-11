@@ -1,0 +1,246 @@
+%%
+%% This is file `sample-acmlarge.tex',
+%% generated with the docstrip utility.
+%%
+%% The original source files were:
+%%
+%% samples.dtx  (with options: `all,journal,bibtex,acmlarge')
+%% 
+%%
+%%
+%% Commands for TeXCount
+%TC:macro \cite [option:text,text]
+%TC:macro \citep [option:text,text]
+%TC:macro \citet [option:text,text]
+%TC:envir table 0 1
+%TC:envir table* 0 1
+%TC:envir tabular [ignore] word
+%TC:envir displaymath 0 word
+%TC:envir math 0 word
+%TC:envir comment 0 0
+%TC:envir figure 0 0
+%TC:envir figure* 0 0
+%%
+%% The first command in your LaTeX source must be the \documentclass
+%% command.
+%%
+%% For submission and review of your manuscript please change the
+%% command to \documentclass[manuscript, screen, review]{acmart}.
+%%
+%% When submitting camera ready or to TAPS, please change the command
+%% to \documentclass[sigconf]{acmart} or whichever template is required
+%% for your publication.
+%%
+%%
+%% WHEN READY TO FINISH FORMAT, CHANGE DOCUMENT CLASS TO THIS:  
+\documentclass[sigconf]{acmart}
+
+%\documentclass[manuscript,review,anonymous]{acmart}
+%%
+%% \BibTeX command to typeset BibTeX logo in the docs
+\AtBeginDocument{%
+  \providecommand\BibTeX{{%
+    Bib\TeX}}}
+
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{multirow}
+\PassOptionsToPackage{table,xcdraw}{xcolor}
+\usepackage{xcolor}
+%\usepackage[table,xcdraw]{xcolor}
+%\usepackage{colortbl} 
+%% Rights management information.  This information is sent to you
+%% when you complete the rights form.  These commands have SAMPLE
+%% values in them; it is your responsibility as an author to replace
+%% the commands and values with those provided to you when you
+%% complete the rights form.
+\copyrightyear{2026}
+\acmYear{2026}
+\setcopyright{cc}
+\setcctype{by-nc-nd}
+\acmConference[CHI '26]{Proceedings of the 2026 CHI Conference on Human Factors in Computing Systems}{April 13--17, 2026}{Barcelona, Spain}
+\acmBooktitle{Proceedings of the 2026 CHI Conference on Human Factors in Computing Systems (CHI '26), April 13--17, 2026, Barcelona, Spain}
+\acmPrice{}
+\acmDOI{10.1145/3772318.3791143}
+\acmISBN{979-8-4007-2278-3/2026/04}
+
+
+%%
+%% Submission ID.
+
+%%\acmSubmissionID{123-A56-BU3}
+
+%% For managing citations, it is recommended to use bibliography
+%% files in BibTeX format.
+%%
+%% You can then either use BibTeX with the ACM-Reference-Format style,
+%% or BibLaTeX with the acmnumeric or acmauthoryear sytles, that include
+%% support for advanced citation of software artefact from the
+%% biblatex-software package, also separately available on CTAN.
+%%
+%% Look at the sample-*-biblatex.tex files for templates showcasing
+%% the biblatex styles.
+
+%%
+%% The majority of ACM publications use numbered citations and
+%% references.  The command \citestyle{authoryear} switches to the
+%% "author year" style.
+%%
+\usepackage{subcaption}
+\usepackage{array,ragged2e}
+\newcolumntype{P}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+\newcolumntype{M}[1]{>{\centering\arraybackslash}m{#1}}
+
+%%
+%% end of the preamble, start of the body of the document source.
+\begin{document}
+
+%%
+%% The "title" command has an optional parameter,
+%% allowing the author to define a "short title" to be used in page headers.
+
+%%
+%% The "title" command has an optional parameter,
+%% allowing the author to define a "short title" to be used in page headers.
+\title{Understanding the Use of a Large Language Model-Powered Guide to Make Virtual Reality Accessible for Blind and Low Vision People}
+
+\author{Jazmin Collins}
+\email{jc2884@cornell.edu}
+\affiliation{%
+  \institution{Cornell University}
+  \city{New York}
+  \state{New York}
+  \country{USA}}
+
+
+%<TODO> Revise your own affiliation
+
+%<TODO> Revise your own affiliation
+
+\author{Sharon Lin}
+\email{syl55@cornell.edu}
+\affiliation{%
+  \institution{Cornell Tech}
+  \city{New York}
+  \state{New York}
+  \country{USA}
+}
+
+\author{Tianqi Liu}
+\email{tl889@cornell.edu}
+\affiliation{%
+  \institution{Cornell Tech}
+  \city{New York}
+  \state{New York}
+  \country{USA}
+}
+
+\author{Andrea Stevenson Won}
+\email{asw248@cornell.edu}
+\affiliation{%
+  \institution{Cornell University}
+  \city{Ithaca}
+  \state{New York}
+  \country{USA}
+}
+
+
+\author{Shiri Azenkot}
+\email{shiri.azenkot@cornell.edu}
+\affiliation{%
+  \institution{Cornell Tech}
+  \city{New York}
+  \state{New York}
+  \country{USA}
+}
+
+
+
+\renewcommand{\shortauthors}{Collins et al.}
+
+%%
+%% The abstract is a short summary of the work to be presented in the
+%% article.
+\input{1Abstract}
+
+
+
+%% Please copy and paste the code instead of the example below.
+%%
+\begin{CCSXML}
+<ccs2012>
+   <concept>
+       <concept_id>10003120.10011738.10011773</concept_id>
+       <concept_desc>Human-centered computing~Empirical studies in accessibility</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10003120.10003121.10011748</concept_id>
+       <concept_desc>Human-centered computing~Empirical studies in HCI</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10003120.10003121.10003122.10011750</concept_id>
+       <concept_desc>Human-centered computing~Field studies</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+          <concept>
+       <concept_id>10003120.10011738.10011775</concept_id>
+       <concept_desc>Human-centered computing~Accessibility technologies</concept_desc>
+       <concept_significance>300</concept_significance>
+       </concept>
+ </ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Human-centered computing~Empirical studies in accessibility}
+\ccsdesc[500]{Human-centered computing~Empirical studies in HCI}
+\ccsdesc[500]{Human-centered computing~Field studies}
+\ccsdesc[300]{Human-centered computing~Accessibility technologies}
+
+
+
+%%
+%% Keywords. The author(s) should pick words that accurately describe
+%% the work being presented. Separate the keywords with commas.
+\keywords{Accessibility, BLV, Blind People, Low Vision People, AI, Artificial Intelligence, LLM, Large language models, Virtual Reality, VR}
+%% A "teaser" image appears between the author and affiliation
+%% information and the body of the document, and typically spans the
+%% page.
+\begin{teaserfigure}
+ \includegraphics[width=\linewidth]{teaser_guide_image.png}
+  \caption{A screenshot of a participant utilizing the AI guide in its dog form, traveling through a virtual park together.}
+  \label{fig:teaser}
+  \Description{A screenshot of a virtual park environment. A female avatar and a German Shepherd breed dog with a bright red guide dog harness stand in the center of the image. A wooden dock is behind them at the edge of a river cutting through the park. A bridge crosses the river to the woman's right. In the distance, there is a line of green trees.}
+\end{teaserfigure}
+
+
+
+%%
+%% This command processes the author and affiliation and title
+%% information and builds the first part of the formatted document.
+\maketitle
+
+\input{2Introduction}
+\input{3RelatedWork}
+\input{4Methods}
+\input{5Findings}
+\input{6Discussion}
+\input{7Conclusion}
+
+\begin{acks}
+  This paper is based upon work supported in part by the National Science Foundation under Grant No. 1942693. The contents of this paper do not necessarily represent the policy of the funders, and no endorsement should be assumed. We thank all the participants for their time.
+  We would also like to thank the LightHouse for the Blind and Visually Impaired for their efforts in testing in-progress prototypes, spearheading recruitment, and proctoring our study sessions.
+\end{acks}
+
+%% The next two lines define the bibliography style to be used, and
+%% the bibliography file.
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{references}
+
+
+%%
+%% If your work has an appendix, this is the place to put it.
+%%\appendix
+
+\end{document}
+\endinput

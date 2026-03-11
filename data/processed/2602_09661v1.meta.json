@@ -1,0 +1,14 @@
+{
+  "paper_id": "2602_09661v1",
+  "abstract": "This paper presents RANT, an ant-inspired multi-robot exploration framework for noisy, uncertain environments. A team of differential-drive robots navigates a $10\\times10$\\,m terrain, collects noisy probe measurements of a hidden richness field, and builds local probabilistic maps while the supervisor maintains a global evaluation. RANT combines particle-filter localisation, a behaviour-based controller with gradient-driven hotspot exploitation, and a lightweight no-revisit coordination mechanis",
+  "num_sections": 6,
+  "section_titles": [
+    "Introduction",
+    "System Overview",
+    "Algorithms",
+    "Experimental Evaluation",
+    "Results and Discussion",
+    "Conclusion"
+  ],
+  "char_count": 37416
+}
