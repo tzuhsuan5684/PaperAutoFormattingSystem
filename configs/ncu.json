@@ -1,0 +1,44 @@
+{
+  "school_id": "ncu",
+  "school_name": "國立中央大學",
+  "margins": {
+    "top_cm": 2.5,
+    "bottom_cm": 2.5,
+    "left_cm": 3.0,
+    "right_cm": 2.0
+  },
+  "page_number": {
+    "position": "bottom_center",
+    "distance_from_bottom_cm": 1.5,
+    "front_matter_format": "roman_lower",
+    "main_text_format": "arabic"
+  },
+  "line_spacing": {
+    "type": "multiple",
+    "value": 1.5,
+    "min_lines_per_page": 25
+  },
+  "font": {
+    "main_chinese": "標楷體",
+    "main_english": "Times New Roman",
+    "size_pt": 12
+  },
+  "figure_caption_position": "below",
+  "table_caption_position": "above",
+  "source_note_position": "below",
+  "abstract_word_count": {
+    "min": 300,
+    "max": 500
+  },
+  "required_sections": [
+    "封面", "書名頁", "授權書", "口試委員審定書",
+    "中文摘要", "英文摘要", "誌謝", "目錄",
+    "圖目錄", "表目錄", "論文正文", "參考文獻"
+  ],
+  "chapter_heading_style": {
+    "numbering": "chinese",
+    "position": "center_top"
+  },
+  "section_numbering_format": "1-1",
+  "reference_citation_style": "bracket_number"
+}
