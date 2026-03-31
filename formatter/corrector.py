@@ -31,6 +31,7 @@ class ThesisCorrector:
         bottom = Cm(m["bottom_cm"])
         left   = Cm(m["left_cm"])
         right  = Cm(m["right_cm"])
+        print(f"top: {top}, bottom: {bottom}, left: {left}, right: {right}")
 
         for section in doc.sections:
             section.top_margin    = top

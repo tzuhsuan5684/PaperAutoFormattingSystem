@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(C:\\\\ProgramData\\\\anaconda3\\\\envs\\\\paper\\\\python.exe -m pytest tests/test_corrector.py -v 2>&1)",
+      "Bash(\"/c/ProgramData/anaconda3/envs/paper/python.exe\" -m pytest tests/test_corrector.py -v 2>&1)"
+    ]
+  }
+}
