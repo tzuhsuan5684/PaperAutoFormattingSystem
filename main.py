@@ -10,7 +10,9 @@ from typing import Any
 
 from docx import Document
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from formatter.checker import FormatIssue, ThesisChecker
 from formatter.corrector import ThesisCorrector
@@ -21,6 +23,13 @@ app = FastAPI(
     title="論文格式自動修正服務",
     description="上傳 .docx，系統自動依照學校格式規則修正並輸出修正後的 .docx。",
     version="1.0.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # ── In-memory token store ────────────────────────────────────────────────────
@@ -150,6 +159,52 @@ def list_schools():
     """列出目前支援的學校清單。"""
     from formatter.loader import list_available_schools
     return {"schools": list_available_schools()}
+
+
+# ── POST /parse-format ───────────────────────────────────────────────────────
+@app.post("/parse-format")
+async def parse_format(body: dict):
+    """
+    使用 AI（Claude）從自然語言格式規定文字中解析出結構化的格式設定。
+    需要設定環境變數 ANTHROPIC_API_KEY。
+    """
+    text = body.get("text", "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="請提供格式規定文字。")
+
+    try:
+        import anthropic
+        client = anthropic.Anthropic()
+        message = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1024,
+            messages=[{
+                "role": "user",
+                "content": (
+                    "請從以下論文格式規定文字中，擷取所有格式規則，"
+                    "以 JSON 陣列格式回傳，每個元素為 [規則名稱, 規則值] 的陣列。"
+                    "只回傳 JSON，不要其他說明文字。\n\n"
+                    f"{text}"
+                ),
+            }],
+        )
+        import json
+        raw = message.content[0].text.strip()
+        # Strip markdown code block if present
+        if raw.startswith("```"):
+            raw = "\n".join(raw.split("\n")[1:-1])
+        rules_display = json.loads(raw)
+        return {"rules_display": rules_display, "config": None}
+    except ImportError:
+        raise HTTPException(status_code=501, detail="anthropic 套件未安裝，請執行 pip install anthropic。")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI 解析失敗：{e}")
+
+
+# ── Serve frontend ────────────────────────────────────────────────────────────
+_FRONTEND_DIR = Path(__file__).parent / "frontend"
+if _FRONTEND_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(_FRONTEND_DIR), html=True), name="frontend")
 
 
 # ── 啟動方式提示 ─────────────────────────────────────────────────────────────
