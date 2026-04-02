@@ -19,6 +19,9 @@ from formatter.corrector import ThesisCorrector
 from formatter.exporter import save_docx
 from formatter.loader import load_config
 
+from dotenv import load_dotenv
+load_dotenv()
+
 app = FastAPI(
     title="論文格式自動修正服務",
     description="上傳 .docx，系統自動依照學校格式規則修正並輸出修正後的 .docx。",
@@ -160,45 +163,62 @@ def list_schools():
     from formatter.loader import list_available_schools
     return {"schools": list_available_schools()}
 
+@app.post("/parse-format-pdf")
+async def parse_format_pdf(file: UploadFile = File(...)):
+    import google.generativeai as genai
+    import base64, os, json
 
-# ── POST /parse-format ───────────────────────────────────────────────────────
-@app.post("/parse-format")
-async def parse_format(body: dict):
-    """
-    使用 AI（Claude）從自然語言格式規定文字中解析出結構化的格式設定。
-    需要設定環境變數 ANTHROPIC_API_KEY。
-    """
-    text = body.get("text", "").strip()
-    if not text:
-        raise HTTPException(status_code=400, detail="請提供格式規定文字。")
+    pdf_bytes = await file.read()
+    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+    model = genai.GenerativeModel("gemini-2.5-flash")
+    
+    prompt = (
+        "請扮演專業排版解析工程師。"
+        "請先閱讀「目次序」確認論文應包含的項目，"
+        "接著從我提供的附件中萃取各項目的排版規則，並嚴格輸出為指定的 JSON 格式。\n\n"
+        "【任務要求】\n"
+        "1. 僅輸出合法 JSON，嚴禁包含 Markdown 標記（如 ```json）、問候語或任何解釋文字。\n"
+        "2. 尺寸須轉換為純數字型別（例如：「2.5公分」填 2.5）。\n"
+        "3. 若內文提及附件，將附件號填入 \"attachment\"（例如：附件九）。\n"
+        "4. 查無資訊的欄位一律填寫 null。\n\n"
+        "【指定的 JSON 輸出格式】\n"
+        "{\n"
+        "  \"global_rules\": {\n"
+        "    \"margins\": {\n"
+        "      \"top\": \"頂端留邊公分數 (number)\",\n"
+        "      \"bottom\": \"底端留邊公分數 (number)\",\n"
+        "      \"left\": \"左側留邊公分數 (number)\",\n"
+        "      \"right\": \"右側留邊公分數 (number)\"\n"
+        "    }\n"
+        "  },\n"
+        "  \"thesis_sections\": [\n"
+        "    {\n"
+        "      \"section_name\": \"章節名稱 (string)\",\n"
+        "      \"content_requirements\": [\n"
+        "        \"該章節必須包含的資訊，例如：校名、論文題目等 (array of strings)\"\n"
+        "      ],\n"
+        "      \"specific_constraints\": [\n"
+        "        \"該章節特有的排版或顏色限制，請拆解成一條一條的獨立規則 (array of strings)\"\n"
+        "      ],\n"
+        "      \"attachment\": \"對應的附件號碼 (string)\"\n"
+        "    }\n"
+        "  ]\n"
+        "}"
+    )
 
-    try:
-        import anthropic
-        client = anthropic.Anthropic()
-        message = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=1024,
-            messages=[{
-                "role": "user",
-                "content": (
-                    "請從以下論文格式規定文字中，擷取所有格式規則，"
-                    "以 JSON 陣列格式回傳，每個元素為 [規則名稱, 規則值] 的陣列。"
-                    "只回傳 JSON，不要其他說明文字。\n\n"
-                    f"{text}"
-                ),
-            }],
-        )
-        import json
-        raw = message.content[0].text.strip()
-        # Strip markdown code block if present
-        if raw.startswith("```"):
-            raw = "\n".join(raw.split("\n")[1:-1])
-        rules_display = json.loads(raw)
-        return {"rules_display": rules_display, "config": None}
-    except ImportError:
-        raise HTTPException(status_code=501, detail="anthropic 套件未安裝，請執行 pip install anthropic。")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI 解析失敗：{e}")
+    response = model.generate_content([
+        {
+            "inline_data": {
+                "mime_type": "application/pdf",
+                "data": base64.b64encode(pdf_bytes).decode("utf-8")
+            }
+        }, prompt])
+    
+    raw = response.text.strip()
+    if raw.startswith("```"):
+        raw = "\n".join(raw.split("\n")[1:-1])
+    rules_display = json.loads(raw)
+    return {"rules_display": rules_display}
 
 
 # ── Serve frontend ────────────────────────────────────────────────────────────
