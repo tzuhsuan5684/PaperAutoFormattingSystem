@@ -949,23 +949,54 @@
     }
 
     .rules-list {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      max-height: 280px;
+      display: block;
+      max-height: 360px;
       overflow-y: auto;
+      padding-right: 4px;
+    }
+    .rules-list .rule-section {
+      margin-bottom: 10px;
+    }
+    .rules-list .rule-section:last-child {
+      margin-bottom: 0;
+    }
+
+    /* section group */
+    .rule-section {
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      overflow: hidden;
+    }
+    .rule-section-hdr {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 12px;
+      background: var(--surface); color: var(--primary);
+      border-bottom: 2px solid var(--primary);
+      font-size: 12px; font-weight: 700;
+    }
+    .rule-section-hdr .rs-attach {
+      margin-left: auto; font-size: 10px; font-weight: 500;
+      background: var(--info-bg); color: var(--info);
+      border: 1px solid var(--info-bd); padding: 1px 7px; border-radius: 99px;
+    }
+    .rule-section-body {
+      display: flex; flex-direction: column; gap: 0;
     }
 
     .rule {
       display: flex;
       align-items: flex-start;
       gap: 10px;
-      padding: 7px 11px;
+      padding: 6px 12px;
       background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--r);
+      border-bottom: 1px solid var(--border);
       font-size: 12px;
     }
+    .rule:last-child { border-bottom: none; }
+
+    /* bullet list inside rule-v */
+    .rule-v ul { margin: 3px 0 0 14px; padding: 0; }
+    .rule-v ul li { margin-bottom: 2px; }
 
     .rule-k {
       font-weight: 700;
@@ -1432,9 +1463,77 @@
 
     function renderRules(src) {
       const el = document.getElementById('rules-list');
+
+      // ── Gemini 結構化格式：{ global_rules, thesis_sections } ──
+      if (src && typeof src === 'object' && !Array.isArray(src) && (src.global_rules || src.thesis_sections)) {
+        const sections = [];
+
+        // 全域規則區塊
+        if (src.global_rules) {
+          const rows = flattenObj(src.global_rules);
+          sections.push(renderSection('全域規則', null, rows));
+        }
+
+        // 各章節區塊
+        if (Array.isArray(src.thesis_sections)) {
+          src.thesis_sections.forEach(sec => {
+            const rows = [];
+            if (sec.content_requirements?.length) {
+              rows.push(['必須包含', `<ul>${sec.content_requirements.map(r => `<li>${r}</li>`).join('')}</ul>`]);
+            }
+            if (sec.specific_constraints) {
+              rows.push(['排版限制', sec.specific_constraints]);
+            }
+            sections.push(renderSection(sec.section_name || '未命名章節', sec.attachment, rows));
+          });
+        }
+
+        el.innerHTML = sections.join('');
+        return;
+      }
+
+      // ── fallback：[[k, v], ...] 陣列 ──
       const entries = Array.isArray(src) ? src : Object.entries(src);
-      el.innerHTML = entries.map(([k, v]) => `
-    <div class="rule"><span class="rule-k">${k}</span><span class="rule-v">${JSON.stringify(v)}</span></div>`).join('');
+      el.innerHTML = `
+        <div class="rule-section">
+          <div class="rule-section-hdr">格式規則</div>
+          <div class="rule-section-body">
+            ${entries.map(([k, v]) => `
+              <div class="rule">
+                <div class="rule-k">${k}</div>
+                <div class="rule-v">${typeof v === 'object' ? JSON.stringify(v) : v}</div>
+              </div>`).join('')}
+          </div>
+        </div>`;
+    }
+
+    function renderSection(title, attachment, rows) {
+      const attachTag = attachment ? `<span class="rs-attach">${attachment}</span>` : '';
+      const bodyRows = rows.length
+        ? rows.map(([k, v]) => `
+            <div class="rule">
+              <div class="rule-k">${k}</div>
+              <div class="rule-v">${v ?? '<span style="color:var(--text-muted)">—</span>'}</div>
+            </div>`).join('')
+        : `<div class="rule"><div class="rule-v" style="color:var(--text-muted)">無詳細規定</div></div>`;
+      return `
+        <div class="rule-section">
+          <div class="rule-section-hdr">${title}${attachTag}</div>
+          <div class="rule-section-body">${bodyRows}</div>
+        </div>`;
+    }
+
+    function flattenObj(obj, prefix) {
+      const rows = [];
+      for (const [k, v] of Object.entries(obj)) {
+        const label = prefix ? `${prefix} › ${k}` : k;
+        if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+          rows.push(...flattenObj(v, label));
+        } else {
+          rows.push([label, v ?? null]);
+        }
+      }
+      return rows;
     }
 
     function confirmCustomFormat() { setStep(2); showPanel('p2'); setActionInfo(`已選擇：<strong>自訂格式</strong>，請匯入論文`); }
