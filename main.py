@@ -10,9 +10,7 @@ from typing import Any
 
 from docx import Document
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
 
 from formatter.checker import FormatIssue, ThesisChecker
 from formatter.corrector import ThesisCorrector
@@ -26,13 +24,6 @@ app = FastAPI(
     title="論文格式自動修正服務",
     description="上傳 .docx，系統自動依照學校格式規則修正並輸出修正後的 .docx。",
     version="1.0.0",
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
 )
 
 # ── In-memory token store ────────────────────────────────────────────────────
