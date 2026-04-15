@@ -166,12 +166,12 @@ def list_schools():
 
 @app.post("/parse-format-pdf")
 async def parse_format_pdf(file: UploadFile = File(...)):
-    import google.generativeai as genai
+    import google.genai as genai
+    import google.genai.types as types
     import base64, os, json
 
     pdf_bytes = await file.read()
-    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-    model = genai.GenerativeModel("gemini-2.5-flash")
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
     
     prompt = (
         "請扮演專業排版解析工程師。"
@@ -207,13 +207,19 @@ async def parse_format_pdf(file: UploadFile = File(...)):
         "}"
     )
 
-    response = model.generate_content([
-        {
-            "inline_data": {
-                "mime_type": "application/pdf",
-                "data": base64.b64encode(pdf_bytes).decode("utf-8")
-            }
-        }, prompt])
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-lite",
+            contents=[
+                types.Part.from_bytes(
+                    data=pdf_bytes,
+                    mime_type="application/pdf"
+                ),
+                prompt
+            ]
+        )
+    except genai.errors.APIError as e:
+        raise HTTPException(status_code=503, detail=f"Gemini API Error: {e.message}")
     
     raw = response.text.strip()
     if raw.startswith("```"):
