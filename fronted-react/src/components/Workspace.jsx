@@ -1,18 +1,73 @@
 import { useEffect, useRef } from 'react'
+import { renderAsync } from 'docx-preview'
+
+const RENDER_OPTS = {
+  inWrapper: true,
+  ignoreWidth: false,
+  ignoreHeight: false,
+  breakPages: true,
+  useBase64URL: true,
+  renderHeaders: true,
+  renderFooters: true,
+}
 
 export default function Workspace({
   step,
-  origHtml, fmtHtml,
+  origFile, fmtFile,
   origTag, fmtTag,
   origLoading, fmtLoading, fmtLoadingMsg, fmtLoadingSub,
   actionInfo,
   mainBtnDisabled, showReset,
   onMainAction, onReset,
   origBodyRef, fmtBodyRef, splitRef,
+  onOrigRendered, onFmtRendered,
 }) {
   const dividerRef = useRef(null)
+  const origDocRef = useRef(null)
+  const fmtDocRef = useRef(null)
+  const origTexts = useRef(null)   // Set<string> of orig paragraph texts for diff
 
-  // Divider drag
+  // ── Render original ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!origFile || !origDocRef.current) return
+    const el = origDocRef.current
+    el.innerHTML = ''
+    origFile.arrayBuffer().then(buf =>
+      renderAsync(buf, el, null, RENDER_OPTS)
+        .then(() => {
+          origTexts.current = new Set(
+            Array.from(el.querySelectorAll('p'))
+              .map(p => p.textContent.trim())
+              .filter(Boolean)
+          )
+          onOrigRendered?.()
+        })
+        .catch(console.error)
+    )
+  }, [origFile])   // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Render formatted + apply diff ────────────────────────────────────────
+  useEffect(() => {
+    if (!fmtFile || !fmtDocRef.current) return
+    const el = fmtDocRef.current
+    el.innerHTML = ''
+    fmtFile.arrayBuffer().then(buf =>
+      renderAsync(buf, el, null, RENDER_OPTS)
+        .then(() => {
+          // Highlight paragraphs that moved or don't exist in orig
+          if (origTexts.current) {
+            el.querySelectorAll('p').forEach(p => {
+              const t = p.textContent.trim()
+              if (t && !origTexts.current.has(t)) p.classList.add('diff-chg')
+            })
+          }
+          onFmtRendered?.()
+        })
+        .catch(console.error)
+    )
+  }, [fmtFile])   // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Divider drag ─────────────────────────────────────────────────────────
   useEffect(() => {
     const divider = dividerRef.current
     const split = splitRef?.current
@@ -47,7 +102,6 @@ export default function Workspace({
     }
   }, [splitRef])
 
-  // Main button label/style by step
   let mainBtnCls = 'btn btn-primary btn-lg'
   let mainBtnTxt = '選擇格式'
   if (step === 2) mainBtnTxt = '匯入論文'
@@ -64,15 +118,13 @@ export default function Workspace({
             <span className="pane-tag">{origTag}</span>
           </div>
           <div className="pane-body" ref={origBodyRef}>
-            {!origHtml && (
+            {!origFile && (
               <div className="ph">
                 <span className="ph-icon">📄</span>
                 <p>請先選擇格式並匯入論文</p>
               </div>
             )}
-            {origHtml && (
-              <div dangerouslySetInnerHTML={{ __html: `<div class="doc-paper">${origHtml}</div>` }} />
-            )}
+            <div ref={origDocRef} className="docx-container" style={{ display: origFile ? 'block' : 'none' }} />
             {origLoading && (
               <div className="pane-overlay">
                 <div className="spin-lg" />
@@ -91,15 +143,13 @@ export default function Workspace({
             <span className="pane-tag">{fmtTag}</span>
           </div>
           <div className="pane-body" ref={fmtBodyRef}>
-            {!fmtHtml && (
+            {!fmtFile && (
               <div className="ph">
                 <span className="ph-icon">✨</span>
                 <p>修正後的論文將顯示於此</p>
               </div>
             )}
-            {fmtHtml && (
-              <div dangerouslySetInnerHTML={{ __html: `<div class="doc-paper">${fmtHtml}</div>` }} />
-            )}
+            <div ref={fmtDocRef} className="docx-container" style={{ display: fmtFile ? 'block' : 'none' }} />
             {fmtLoading && (
               <div className="pane-overlay">
                 <div className="spin-lg" />
@@ -113,18 +163,11 @@ export default function Workspace({
 
       {/* Action bar */}
       <div id="action-bar">
-        <div
-          className="action-info"
-          dangerouslySetInnerHTML={{ __html: actionInfo }}
-        />
+        <div className="action-info" dangerouslySetInnerHTML={{ __html: actionInfo }} />
         {showReset && (
           <button className="btn btn-ghost" onClick={onReset}>重新開始</button>
         )}
-        <button
-          className={mainBtnCls}
-          disabled={mainBtnDisabled}
-          onClick={onMainAction}
-        >
+        <button className={mainBtnCls} disabled={mainBtnDisabled} onClick={onMainAction}>
           {mainBtnTxt}
         </button>
       </div>

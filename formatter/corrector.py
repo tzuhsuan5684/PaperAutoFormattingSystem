@@ -90,11 +90,17 @@ class ThesisCorrector:
             )
 
     def _ensure_two_sections(self, doc: Document) -> None:
-        """若文件只有一個 section，在偵測到正文第一章時插入分節符號。"""
+        """若文件只有一個 section，在偵測到正文第一章時插入分節符號。
+
+        插入時從原有的 body-level sectPr 複製 pgSz / pgMar，確保新 Section[0]
+        具備完整的頁面屬性，讓 docx-preview 能正確渲染封面頁。
+        """
         if len(doc.sections) >= 2:
             return
 
-        # 找到「第一章」或 Heading 1 段落，插入連續分節（奇偶分頁也可改 evenPage）
+        # 記錄原始 body sectPr，以便複製 pgSz / pgMar 到新 Section[0]
+        body_sect_pr = doc.sections[0]._sectPr
+
         for para in doc.paragraphs:
             style_name = (para.style.name or "").lower()
             text       = para.text.strip()
@@ -103,19 +109,42 @@ class ThesisCorrector:
                 or re.match(r"^第[一二三四五六七八九十]+章", text)
             )
             if is_chapter:
-                self._insert_section_break_before(para, break_type="nextPage")
+                self._insert_section_break_before(
+                    para,
+                    break_type="nextPage",
+                    ref_sect_pr=body_sect_pr,
+                )
                 break
 
     @staticmethod
-    def _insert_section_break_before(para, break_type: str = "nextPage") -> None:
-        """在指定段落之前插入分節符號（操作底層 XML）。"""
-        # 建立新的 <w:p> 用來承載分節符號
-        new_p = OxmlElement("w:p")
-        pPr   = OxmlElement("w:pPr")
+    def _insert_section_break_before(
+        para,
+        break_type: str = "nextPage",
+        ref_sect_pr=None,
+    ) -> None:
+        """在指定段落之前插入分節符號（操作底層 XML）。
+
+        ref_sect_pr: 若提供，則從此 sectPr 複製 pgSz 與 pgMar 到新 Section，
+                     確保封面頁有完整的頁面尺寸定義。
+        """
+        from copy import deepcopy
+
+        new_p  = OxmlElement("w:p")
+        pPr    = OxmlElement("w:pPr")
         sectPr = OxmlElement("w:sectPr")
-        pgSz   = OxmlElement("w:type")
-        pgSz.set(qn("w:val"), break_type)
-        sectPr.append(pgSz)
+
+        # 分節類型
+        w_type = OxmlElement("w:type")
+        w_type.set(qn("w:val"), break_type)
+        sectPr.append(w_type)
+
+        # 從參考 sectPr 複製頁面尺寸與邊距，避免封面頁 section 屬性不完整
+        if ref_sect_pr is not None:
+            for tag_name in ("w:pgSz", "w:pgMar"):
+                elem = ref_sect_pr.find(qn(tag_name))
+                if elem is not None:
+                    sectPr.append(deepcopy(elem))
+
         pPr.append(sectPr)
         new_p.append(pPr)
         para._p.addprevious(new_p)
@@ -284,10 +313,17 @@ class ThesisCorrector:
 
     # ── 5. run_all ─────────────────────────────────────────────────────────
     def run_all(self, doc: Document, config: dict[str, Any]) -> Document:
-        """依序執行所有格式修正，回傳修正後的 doc。"""
+        """依序執行所有格式修正，回傳修正後的 doc。
+
+        執行順序說明：
+        1. fix_page_numbers 先建立前置／正文兩個 section 結構（含 pgSz 複製）
+        2. fix_margins 再對所有 section 套用邊距，確保新建的 Section[0] 也被涵蓋
+        3. fix_line_spacing
+        4. fix_figure_table_captions
+        """
+        self.fix_page_numbers(doc, config)
         self.fix_margins(doc, config)
         self.fix_line_spacing(doc, config)
-        self.fix_page_numbers(doc, config)
         self.fix_figure_table_captions(doc, config)
         return doc
 

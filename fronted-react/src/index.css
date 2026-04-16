@@ -111,7 +111,7 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   background: var(--bg); color: var(--text-muted); border: 1px solid var(--border);
 }
 
-.pane-body { flex: 1; overflow-y: auto; padding: 20px; background: var(--surface-2); position: relative; }
+.pane-body { flex: 1; overflow: auto; padding: 20px; background: var(--surface-2); position: relative; }
 
 .divider { background: var(--border); cursor: col-resize; transition: background .15s; }
 .divider:hover { background: var(--accent); }
@@ -121,16 +121,26 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .ph-icon { font-size: 40px; opacity: .3; }
 .ph p { font-size: 13px; }
 
-/* document paper */
-.doc-paper {
-  background: #fff; max-width: 660px; margin: 0 auto; padding: 48px 60px;
-  box-shadow: var(--shm); font-family: '標楷體', 'Times New Roman', serif;
-  font-size: 13.5px; line-height: 1.9; min-height: 800px;
+/* docx-preview container */
+.docx-container { min-height: 400px; }
+
+/* wrapper: centre pages horizontally, remove default background */
+.docx-container .docx-wrapper {
+  background: var(--surface-2) !important;
+  padding: 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
 }
-.doc-paper p { margin-bottom: .7em; }
-.doc-paper h1, .doc-paper h2, .doc-paper h3 { margin: 1em 0 .5em; font-weight: bold; }
-.doc-paper table { border-collapse: collapse; width: 100%; margin: 1em 0; }
-.doc-paper td, .doc-paper th { border: 1px solid #ccc; padding: 4px 8px; }
+
+/* each page: A4 shadow, gap between pages */
+.docx-container .docx {
+  box-shadow: var(--shm) !important;
+  margin-bottom: 20px !important;
+  flex-shrink: 0 !important;
+}
+
+/* diff highlight applies to <p> elements inside docx-preview output */
 
 /* diff highlight */
 .diff-chg { background: var(--hl); border-left: 3px solid var(--hl-bd); padding-left: 6px; margin-left: -6px; transition: background .3s; }
