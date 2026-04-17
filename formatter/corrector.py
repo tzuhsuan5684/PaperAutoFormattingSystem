@@ -11,7 +11,6 @@ from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 from docx.shared import Cm, Pt
 from docx.enum.text import WD_LINE_SPACING
-from lxml import etree
 
 
 # ── 正則：圖說 / 表說 / 資料來源 ──────────────────────────────────────────
@@ -208,7 +207,7 @@ class ThesisCorrector:
         sect_pr.append(pg_num_type)
 
     # ── 4. 圖表說明位置 ────────────────────────────────────────────────────
-    def fix_figure_table_captions(self, doc: Document, config: dict[str, Any]) -> None:
+    def fix_figure_table_captions(self, doc: Document, _config: dict[str, Any] = None) -> None:
         """
         偵測圖說 / 表說 / 資料來源，確保：
         - 圖說在圖片（含圖片的段落）下方
@@ -311,21 +310,95 @@ class ThesisCorrector:
                 return j
         return None
 
-    # ── 5. run_all ─────────────────────────────────────────────────────────
-    def run_all(self, doc: Document, config: dict[str, Any]) -> Document:
+    # ── 5. 字型修正 ────────────────────────────────────────────────────────
+    def fix_fonts(self, doc: Document, config: dict[str, Any]) -> None:
+        """
+        逐一修正所有段落的每個 run：
+          - 中文字型（w:eastAsia）→ config font.main_chinese（預設 標楷體）
+          - 英文字型（w:ascii / w:hAnsi / w:cs）→ config font.main_english（預設 Times New Roman）
+          - 字型大小 → config font.size_pt（預設 12pt）
+
+        例外：樣式名稱含 "Heading" / "heading" / "ChapterHeading" /
+              "SectionHeading" / "SubSectionHeading" 的段落，
+              只修字型名稱，不改字型大小（保留標題的大字號）。
+        """
+        font_cfg = config.get("font", {})
+        zh_font  = font_cfg.get("main_chinese", "標楷體")
+        en_font  = font_cfg.get("main_english", "Times New Roman")
+        size_pt  = font_cfg.get("size_pt", 12)
+        half_pt  = str(size_pt * 2)   # OOXML 用 half-points
+
+        _HEADING_KEYWORDS = ("heading", "chapterheading", "sectionheading", "subsectionheading")
+
+        for para in doc.paragraphs:
+            style_name = (para.style.name or "").lower().replace(" ", "")
+            is_heading  = any(kw in style_name for kw in _HEADING_KEYWORDS)
+
+            for run in para.runs:
+                r_elem = run._r
+
+                # 取得或建立 rPr
+                rpr = r_elem.find(qn("w:rPr"))
+                if rpr is None:
+                    rpr = OxmlElement("w:rPr")
+                    r_elem.insert(0, rpr)
+
+                # ── 字型名稱 ──
+                rFonts = rpr.find(qn("w:rFonts"))
+                if rFonts is None:
+                    rFonts = OxmlElement("w:rFonts")
+                    rpr.insert(0, rFonts)
+                rFonts.set(qn("w:ascii"),    en_font)
+                rFonts.set(qn("w:hAnsi"),    en_font)
+                rFonts.set(qn("w:eastAsia"), zh_font)
+                rFonts.set(qn("w:cs"),       en_font)
+
+                # ── 字型大小（標題段落跳過）──
+                if not is_heading:
+                    for tag in ("w:sz", "w:szCs"):
+                        sz_elem = rpr.find(qn(tag))
+                        if sz_elem is None:
+                            sz_elem = OxmlElement(tag)
+                            rpr.append(sz_elem)
+                        sz_elem.set(qn("w:val"), half_pt)
+
+    # ── 6. run_all ─────────────────────────────────────────────────────────
+    def run_all(
+        self,
+        doc: Document,
+        config: dict[str, Any],
+        template_path=None,
+    ) -> Document:
         """依序執行所有格式修正，回傳修正後的 doc。
 
         執行順序說明：
+        0. （選填）inject_template_styles：從學校模板注入 Word Styles
         1. fix_page_numbers 先建立前置／正文兩個 section 結構（含 pgSz 複製）
         2. fix_margins 再對所有 section 套用邊距，確保新建的 Section[0] 也被涵蓋
         3. fix_line_spacing
-        4. fix_figure_table_captions
+        4. fix_fonts：字型名稱 + 字型大小
+        5. fix_figure_table_captions
+
+        template_path: Path | None
+            傳入 templates/{school_id}.docx 的路徑；
+            None 時跳過樣式注入，退回純 JSON config 修正模式。
         """
+        if template_path is not None:
+            self._inject_template_styles(doc, template_path)
         self.fix_page_numbers(doc, config)
         self.fix_margins(doc, config)
         self.fix_line_spacing(doc, config)
+        self.fix_fonts(doc, config)
         self.fix_figure_table_captions(doc, config)
         return doc
+
+    @staticmethod
+    def _inject_template_styles(doc: Document, template_path) -> None:
+        """將模板的 Word Styles 注入 doc（已有的不覆蓋）。"""
+        from formatter.template_loader import inject_styles_from_template
+        injected = inject_styles_from_template(template_path, doc)
+        if injected:
+            print(f"[template] 注入 {len(injected)} 個樣式：{injected}")
 
 
 # ── 工具函式 ────────────────────────────────────────────────────────────────

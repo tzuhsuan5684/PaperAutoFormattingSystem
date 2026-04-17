@@ -19,6 +19,7 @@ from formatter.checker import FormatIssue, ThesisChecker
 from formatter.corrector import ThesisCorrector
 from formatter.exporter import save_docx
 from formatter.loader import load_config
+from formatter.template_loader import get_template_path
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -104,8 +105,9 @@ async def format_thesis(
     # 修正前檢查
     issues_before = checker.check_all(doc, config)
 
-    # 執行格式修正
-    doc = corrector.run_all(doc, config)
+    # 執行格式修正（有模板則先注入 Word Styles）
+    template_path = get_template_path(school_id)
+    doc = corrector.run_all(doc, config, template_path=template_path)
 
     # 修正後檢查
     issues_after = checker.check_all(doc, config)
