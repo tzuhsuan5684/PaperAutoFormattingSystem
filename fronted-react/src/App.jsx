@@ -135,8 +135,8 @@ export default function App() {
     setStep(5)
     setOrigTag(p.origName)
     if (p.isAI) {
-      setFmtTag('AI 重新排版完成')
-      setActionInfo('AI 已依學校格式重新生成論文，可下載 .docx 或 .tex 原始檔')
+      setFmtTag('AI 智慧排版完成')
+      setActionInfo('AI 已辨識論文結構並套用 Word 模板，可下載排版後 .docx')
     } else {
       setFmtTag(`已修正・${p.issueCount} 個問題`)
       setActionInfo(`發現 <strong>${p.issueCount}</strong> 個問題，已自動修正 <strong>${p.fixedCount}</strong> 個`)
@@ -185,21 +185,21 @@ export default function App() {
       form.append('school_id', schoolId)
 
       if (scanMode === 'ai') {
-        // ── AI LaTeX 流程 ──────────────────────────────────────────────
-        setFmtLoadingMsg('AI 生成 LaTeX 中…')
-        setFmtLoadingSub('正在依學校格式重新排版，請稍候…')
+        // ── AI Schema → Word 模板流程 ──────────────────────────────────
+        setFmtLoadingMsg('AI 分析論文結構中…')
+        setFmtLoadingSub('辨識摘要、章節、參考文獻等區塊…')
 
-        const res = await fetch(`${API}/generate-latex`, { method: 'POST', body: form })
+        const res = await fetch(`${API}/smart-format`, { method: 'POST', body: form })
         if (!res.ok) throw new Error(((await res.json().catch(() => ({}))).detail) || 'AI 排版失敗')
         const data = await res.json()
 
-        setDownloadToken(data.download_token_docx)
-        setTexToken(data.download_token_tex)
+        setDownloadToken(data.download_token)
+        setTexToken(null)
 
-        const fmtBlob = await fetch(`${API}/download/${data.download_token_docx}`).then(r => r.blob())
-        const fmtFileObj = new File([fmtBlob], `ai_${paperFile.name}`, { type: fmtBlob.type })
+        const fmtBlob = await fetch(`${API}/download/${data.download_token}`).then(r => r.blob())
+        const fmtFileObj = new File([fmtBlob], `smart_${paperFile.name}`, { type: fmtBlob.type })
 
-        setFmtLoadingMsg('產生預覽中…')
+        setFmtLoadingMsg('套用 Word 模板中…')
         setFmtLoadingSub('')
         pendingState.current = { origName: paperFile.name, isAI: true }
         setFmtFile(fmtFileObj)
@@ -250,7 +250,7 @@ export default function App() {
     if (!downloadToken) return
     const a = document.createElement('a')
     a.href = `${API}/download/${downloadToken}`
-    a.download = mode === 'ai' ? 'ai_formatted_thesis.docx' : 'formatted_thesis.docx'
+    a.download = mode === 'ai' ? 'smart_formatted_thesis.docx' : 'formatted_thesis.docx'
     a.click()
     showToast('已開始下載修正後論文')
   }

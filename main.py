@@ -269,6 +269,80 @@ async def generate_latex_endpoint(
     })
 
 
+@app.post("/smart-format")
+async def smart_format(
+    file:      UploadFile = File(..., description=".docx 論文草稿"),
+    school_id: str        = Form(..., description="學校代碼，例如 ncu"),
+):
+    """
+    三階段智慧排版：
+
+    1. AI 分析草稿結構 → 標準化 Schema
+    2. Schema 套用 Word 模板 → 格式化 .docx
+
+    回傳：
+    - `schema`         ：AI 辨識的論文結構（JSON）
+    - `download_token` ：下載排版後 .docx 的憑證（30 分鐘有效）
+    """
+    _cleanup_expired_tokens()
+
+    filename = file.filename or "thesis.docx"
+    if not filename.lower().endswith(".docx"):
+        raise HTTPException(status_code=400, detail="只接受 .docx 格式。")
+
+    try:
+        config = load_config(school_id)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    content_bytes = await file.read()
+    if not content_bytes:
+        raise HTTPException(status_code=400, detail="上傳的檔案是空的。")
+
+    try:
+        doc = Document(io.BytesIO(content_bytes))
+    except Exception:
+        raise HTTPException(status_code=400, detail="無法解析 .docx，請確認檔案格式。")
+
+    # ── 1. 萃取原始內容 ──────────────────────────────────────────────────────
+    from formatter.content_extractor import extract_content
+    extracted = extract_content(doc)
+
+    # ── 2. AI 分析結構 → Schema ──────────────────────────────────────────────
+    from formatter.ai_analyzer import analyze
+    try:
+        schema = analyze(extracted)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"AI 分析失敗：{e}")
+
+    # ── 3. Schema 套用 Word 模板 ─────────────────────────────────────────────
+    from formatter.word_builder import build
+    from formatter.exporter import save_docx
+    template_path = get_template_path(school_id)
+    formatted_doc = build(schema, template_path, config)
+
+    tmp_file = tempfile.NamedTemporaryFile(
+        delete=False, suffix=".docx", prefix="smart_formatted_",
+    )
+    tmp_path = tmp_file.name
+    tmp_file.close()
+    save_docx(formatted_doc, tmp_path)
+
+    token = secrets.token_urlsafe(32)
+    _TOKEN_STORE[token] = {
+        "path":       tmp_path,
+        "filename":   f"smart_{filename}",
+        "expires_at": time.time() + _TOKEN_TTL,
+        "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }
+
+    return JSONResponse({
+        "schema":         schema.model_dump(),
+        "download_token": token,
+        "message":        "AI 結構分析與 Word 排版完成。",
+    })
+
+
 @app.post("/parse-format-pdf")
 async def parse_format_pdf(file: UploadFile = File(...)):
     import base64, json, os
