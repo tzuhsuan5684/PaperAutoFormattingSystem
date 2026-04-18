@@ -14,6 +14,7 @@ export default function WizardModal({ panel, schools, schoolsLoading, onClose, o
   // Upload paper state
   const [paperFile, setPaperFile] = useState(null)
   const [dzOver, setDzOver] = useState(false)
+  const [mode, setMode] = useState('rule')   // 'rule' | 'ai'
 
   const cfFileRef = useRef(null)
   const paperFileRef = useRef(null)
@@ -218,13 +219,38 @@ export default function WizardModal({ panel, schools, schoolsLoading, onClose, o
                 </div>
               )}
 
-              <div style={{ marginTop: 14, padding: '10px 12px', background: 'var(--warn-bg)', border: '1px solid var(--warn-bd)', borderRadius: 'var(--r)', fontSize: 12, color: 'var(--warn)' }}>
+              {/* 處理模式 */}
+              <div style={{ marginTop: 14 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>處理方式</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[
+                    { value: 'rule', label: '規則修正', desc: '依格式規範自動修正' },
+                    { value: 'ai',   label: 'AI 重新排版', desc: 'AI 生成 LaTeX，輸出 .docx' },
+                  ].map(opt => (
+                    <label
+                      key={opt.value}
+                      onClick={() => setMode(opt.value)}
+                      style={{
+                        flex: 1, padding: '8px 10px', borderRadius: 'var(--r)', cursor: 'pointer',
+                        border: `1.5px solid ${mode === opt.value ? 'var(--accent)' : 'var(--border)'}`,
+                        background: mode === opt.value ? 'var(--accent-bg, #eff6ff)' : 'transparent',
+                        fontSize: 12,
+                      }}
+                    >
+                      <div style={{ fontWeight: 600, marginBottom: 2 }}>{opt.label}</div>
+                      <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>{opt.desc}</div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginTop: 10, padding: '10px 12px', background: 'var(--warn-bg)', border: '1px solid var(--warn-bd)', borderRadius: 'var(--r)', fontSize: 12, color: 'var(--warn)' }}>
                 ⚠ 建議先備份原始論文，修正為不可逆操作
               </div>
             </div>
             <div className="card-foot">
               <button className="btn btn-ghost" onClick={() => onClose('p1')}>← 返回</button>
-              <button className="btn btn-primary" disabled={!paperFile} onClick={() => onStartScan(paperFile)}>開始掃描</button>
+              <button className="btn btn-primary" disabled={!paperFile} onClick={() => onStartScan(paperFile, mode)}>開始掃描</button>
             </div>
           </>
         )}

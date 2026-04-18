@@ -3,6 +3,7 @@ FastAPI 入口：論文格式自動修正服務。
 """
 import io
 import secrets
+import subprocess
 import tempfile
 import time
 from pathlib import Path
@@ -153,9 +154,12 @@ def download_formatted(token: str):
         raise HTTPException(status_code=500, detail="修正後的檔案已遺失，請重新上傳。")
 
     return FileResponse(
-        path        = str(path),
-        filename    = entry["filename"],
-        media_type  = "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        path       = str(path),
+        filename   = entry["filename"],
+        media_type = entry.get(
+            "media_type",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ),
     )
 
 
@@ -166,15 +170,113 @@ def list_schools():
     from formatter.loader import list_available_schools
     return {"schools": list_available_schools()}
 
+@app.post("/generate-latex")
+async def generate_latex_endpoint(
+    file:      UploadFile = File(..., description=".docx 論文草稿"),
+    school_id: str        = Form(..., description="學校代碼，例如 ncu"),
+):
+    """
+    上傳 rough .docx，AI 依學校格式生成 LaTeX，再由 pandoc 轉為 .docx。
+
+    回傳：
+    - `download_token_docx`：下載 AI 排版後 .docx 的憑證
+    - `download_token_tex` ：下載 LaTeX 原始碼 .tex 的憑證
+    """
+    _cleanup_expired_tokens()
+
+    filename = file.filename or "thesis.docx"
+    if not filename.lower().endswith(".docx"):
+        raise HTTPException(status_code=400, detail="只接受 .docx 格式。")
+
+    try:
+        config = load_config(school_id)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    content_bytes = await file.read()
+    if not content_bytes:
+        raise HTTPException(status_code=400, detail="上傳的檔案是空的。")
+
+    try:
+        doc = Document(io.BytesIO(content_bytes))
+    except Exception:
+        raise HTTPException(status_code=400, detail="無法解析 .docx，請確認檔案格式。")
+
+    # 1. 萃取文件內容
+    from formatter.content_extractor import extract_content
+    extracted = extract_content(doc)
+
+    # 2. Gemini 生成 LaTeX
+    from formatter.latex_generator import generate_latex
+    try:
+        latex_src = generate_latex(extracted, config)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"OpenAI API 錯誤：{e}")
+
+    # 3. 寫入暫存 .tex
+    tmp_tex = tempfile.NamedTemporaryFile(
+        delete=False, suffix=".tex", prefix="thesis_",
+        mode="w", encoding="utf-8",
+    )
+    tmp_tex.write(latex_src)
+    tmp_tex.close()
+
+    # 4. pandoc 將 .tex 轉為 .docx
+    tmp_docx = tempfile.NamedTemporaryFile(
+        delete=False, suffix=".docx", prefix="thesis_ai_",
+    )
+    tmp_docx.close()
+
+    template_path = get_template_path(school_id)
+    pandoc_cmd = [
+        "pandoc", tmp_tex.name,
+        "-f", "latex", "-t", "docx",
+        "-o", tmp_docx.name,
+        "--wrap=none",
+    ]
+    if template_path:
+        pandoc_cmd += ["--reference-doc", str(template_path)]
+
+    result = subprocess.run(pandoc_cmd, capture_output=True, text=True, timeout=60)
+    if result.returncode != 0:
+        raise HTTPException(
+            status_code=500,
+            detail=f"pandoc 轉換失敗：{result.stderr[:500]}",
+        )
+
+    # 5. 發放下載憑證
+    now = time.time()
+    token_docx = secrets.token_urlsafe(32)
+    token_tex  = secrets.token_urlsafe(32)
+
+    _TOKEN_STORE[token_docx] = {
+        "path":       tmp_docx.name,
+        "filename":   f"ai_formatted_{filename}",
+        "expires_at": now + _TOKEN_TTL,
+        "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }
+    _TOKEN_STORE[token_tex] = {
+        "path":       tmp_tex.name,
+        "filename":   "thesis_source.tex",
+        "expires_at": now + _TOKEN_TTL,
+        "media_type": "text/plain; charset=utf-8",
+    }
+
+    return JSONResponse({
+        "download_token_docx": token_docx,
+        "download_token_tex":  token_tex,
+        "message":             "AI LaTeX 生成完成。",
+    })
+
+
 @app.post("/parse-format-pdf")
 async def parse_format_pdf(file: UploadFile = File(...)):
-    import google.genai as genai
-    import google.genai.types as types
-    import base64, os, json
+    import base64, json, os
+    from openai import OpenAI, APIStatusError
 
     pdf_bytes = await file.read()
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-    
+    client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+
     prompt = (
         "請扮演專業排版解析工程師。"
         "請先閱讀「目次序」確認論文應包含的項目，"
@@ -209,21 +311,29 @@ async def parse_format_pdf(file: UploadFile = File(...)):
         "}"
     )
 
+    # 用 pypdf 萃取 PDF 文字（OpenAI 不支援直接傳 PDF bytes）
+    import pypdf
+    reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
+    pdf_text = "\n".join(
+        page.extract_text() or "" for page in reader.pages
+    ).strip()
+    if not pdf_text:
+        raise HTTPException(status_code=400, detail="無法從 PDF 萃取文字，請確認 PDF 非純圖片格式。")
+
     try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
-            contents=[
-                types.Part.from_bytes(
-                    data=pdf_bytes,
-                    mime_type="application/pdf"
-                ),
-                prompt
-            ]
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{
+                "role": "user",
+                "content": f"{prompt}\n\n【PDF 內容】\n{pdf_text}",
+            }],
+            temperature=0.1,
+            max_tokens=4096,
         )
-    except genai.errors.APIError as e:
-        raise HTTPException(status_code=503, detail=f"Gemini API Error: {e.message}")
-    
-    raw = response.text.strip()
+    except APIStatusError as e:
+        raise HTTPException(status_code=503, detail=f"OpenAI API Error: {e.message}")
+
+    raw = response.choices[0].message.content.strip()
     if raw.startswith("```"):
         raw = "\n".join(raw.split("\n")[1:-1])
     rules_display = json.loads(raw)

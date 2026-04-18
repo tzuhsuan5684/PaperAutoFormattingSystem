@@ -39,6 +39,8 @@ export default function App() {
   const [issuesAfter,   setIssuesAfter]   = useState([])
   const [activeIssueIdx, setActiveIssueIdx] = useState(null)
   const [downloadToken, setDownloadToken] = useState(null)
+  const [texToken,      setTexToken]      = useState(null)
+  const [mode,          setMode]          = useState('rule')  // 'rule' | 'ai'
 
   const [actionInfo,      setActionInfo]      = useState('請先選擇學校格式，再匯入論文。')
   const [mainBtnDisabled, setMainBtnDisabled] = useState(false)
@@ -132,8 +134,13 @@ export default function App() {
     setFmtLoading(false)
     setStep(5)
     setOrigTag(p.origName)
-    setFmtTag(`已修正・${p.issueCount} 個問題`)
-    setActionInfo(`發現 <strong>${p.issueCount}</strong> 個問題，已自動修正 <strong>${p.fixedCount}</strong> 個`)
+    if (p.isAI) {
+      setFmtTag('AI 重新排版完成')
+      setActionInfo('AI 已依學校格式重新生成論文，可下載 .docx 或 .tex 原始檔')
+    } else {
+      setFmtTag(`已修正・${p.issueCount} 個問題`)
+      setActionInfo(`發現 <strong>${p.issueCount}</strong> 個問題，已自動修正 <strong>${p.fixedCount}</strong> 個`)
+    }
     setMainBtnDisabled(false)
     setShowReset(true)
   }
@@ -154,8 +161,9 @@ export default function App() {
   }
 
   // ── Main scan flow ──────────────────────────────────────────────────────
-  async function handleStartScan(paperFile) {
+  async function handleStartScan(paperFile, scanMode = 'rule') {
     if (!paperFile || !school) return
+    setMode(scanMode)
     setModalPanel(null)
     setStep(3)
     setActionInfo('掃描中，請稍候…')
@@ -166,43 +174,65 @@ export default function App() {
     setOrigFile(paperFile)
 
     setFmtLoading(true)
-    setFmtLoadingMsg('掃描問題中…')
-    setFmtLoadingSub('正在分析格式規範…')
+    const schoolId = school.school_id === '_custom' ? 'ncu' : school.school_id
 
     try {
       await new Promise(r => setTimeout(r, 600))
-      setFmtLoadingMsg('自動修正中…')
-      setFmtLoadingSub('修正頁邊距、字型、行距…')
       setStep(4)
 
       const form = new FormData()
       form.append('file', paperFile)
-      form.append('school_id', school.school_id === '_custom' ? 'ncu' : school.school_id)
+      form.append('school_id', schoolId)
 
-      const res = await fetch(`${API}/format`, { method: 'POST', body: form })
-      if (!res.ok) throw new Error(((await res.json().catch(() => ({}))).detail) || '格式化失敗')
-      const data = await res.json()
+      if (scanMode === 'ai') {
+        // ── AI LaTeX 流程 ──────────────────────────────────────────────
+        setFmtLoadingMsg('AI 生成 LaTeX 中…')
+        setFmtLoadingSub('正在依學校格式重新排版，請稍候…')
 
-      setIssues(data.issues_before || [])
-      setIssuesAfter(data.issues_after || [])
-      setDownloadToken(data.download_token)
+        const res = await fetch(`${API}/generate-latex`, { method: 'POST', body: form })
+        if (!res.ok) throw new Error(((await res.json().catch(() => ({}))).detail) || 'AI 排版失敗')
+        const data = await res.json()
 
-      const fmtBlob = await fetch(`${API}/download/${data.download_token}`).then(r => r.blob())
-      const fmtFileObj = new File([fmtBlob], `formatted_${paperFile.name}`, { type: fmtBlob.type })
+        setDownloadToken(data.download_token_docx)
+        setTexToken(data.download_token_tex)
 
-      setFmtLoadingMsg('產生預覽中…')
-      setFmtLoadingSub('')
+        const fmtBlob = await fetch(`${API}/download/${data.download_token_docx}`).then(r => r.blob())
+        const fmtFileObj = new File([fmtBlob], `ai_${paperFile.name}`, { type: fmtBlob.type })
 
-      // Store state that handleFmtRendered will apply after docx finishes rendering
-      const issueCount = (data.issues_before || []).length
-      pendingState.current = {
-        origName:   paperFile.name,
-        issueCount,
-        fixedCount: (data.issues_before || []).filter(i => i.auto_fixed).length,
+        setFmtLoadingMsg('產生預覽中…')
+        setFmtLoadingSub('')
+        pendingState.current = { origName: paperFile.name, isAI: true }
+        setFmtFile(fmtFileObj)
+
+      } else {
+        // ── 規則修正流程 ────────────────────────────────────────────────
+        setFmtLoadingMsg('掃描問題中…')
+        setFmtLoadingSub('正在分析格式規範…')
+        await new Promise(r => setTimeout(r, 0))
+        setFmtLoadingMsg('自動修正中…')
+        setFmtLoadingSub('修正頁邊距、字型、行距…')
+
+        const res = await fetch(`${API}/format`, { method: 'POST', body: form })
+        if (!res.ok) throw new Error(((await res.json().catch(() => ({}))).detail) || '格式化失敗')
+        const data = await res.json()
+
+        setIssues(data.issues_before || [])
+        setIssuesAfter(data.issues_after || [])
+        setDownloadToken(data.download_token)
+
+        const fmtBlob = await fetch(`${API}/download/${data.download_token}`).then(r => r.blob())
+        const fmtFileObj = new File([fmtBlob], `formatted_${paperFile.name}`, { type: fmtBlob.type })
+
+        setFmtLoadingMsg('產生預覽中…')
+        setFmtLoadingSub('')
+        const issueCount = (data.issues_before || []).length
+        pendingState.current = {
+          origName:   paperFile.name,
+          issueCount,
+          fixedCount: (data.issues_before || []).filter(i => i.auto_fixed).length,
+        }
+        setFmtFile(fmtFileObj)
       }
-
-      // Trigger render in Workspace; handleFmtRendered() will be called when done
-      setFmtFile(fmtFileObj)
 
     } catch (err) {
       pendingState.current = null
@@ -220,9 +250,18 @@ export default function App() {
     if (!downloadToken) return
     const a = document.createElement('a')
     a.href = `${API}/download/${downloadToken}`
-    a.download = 'formatted_thesis.docx'
+    a.download = mode === 'ai' ? 'ai_formatted_thesis.docx' : 'formatted_thesis.docx'
     a.click()
     showToast('已開始下載修正後論文')
+  }
+
+  async function exportTex() {
+    if (!texToken) return
+    const a = document.createElement('a')
+    a.href = `${API}/download/${texToken}`
+    a.download = 'thesis_source.tex'
+    a.click()
+    showToast('已開始下載 LaTeX 原始檔')
   }
 
   function handleMainAction() {
@@ -237,11 +276,12 @@ export default function App() {
   }
 
   function handleReset() {
-    setStep(1); setSchool(null)
+    setStep(1); setSchool(null); setMode('rule')
     setOrigFile(null); setFmtFile(null)
     pendingState.current = null
     setOrigTag('尚未匯入'); setFmtTag('尚未修正')
-    setIssues([]); setIssuesAfter([]); setActiveIssueIdx(null); setDownloadToken(null)
+    setIssues([]); setIssuesAfter([]); setActiveIssueIdx(null)
+    setDownloadToken(null); setTexToken(null)
     setActionInfo('請先選擇學校格式，再匯入論文。')
     setMainBtnDisabled(false); setShowReset(false)
     setModalPanel('p1')
@@ -268,6 +308,8 @@ export default function App() {
             splitRef={splitRef}
             onOrigRendered={handleOrigRendered}
             onFmtRendered={handleFmtRendered}
+            showTexBtn={mode === 'ai' && !!texToken}
+            onExportTex={exportTex}
           />
           <Sidebar
             issues={issues}

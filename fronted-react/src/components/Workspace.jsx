@@ -21,6 +21,7 @@ export default function Workspace({
   onMainAction, onReset,
   origBodyRef, fmtBodyRef, splitRef,
   onOrigRendered, onFmtRendered,
+  showTexBtn, onExportTex,
 }) {
   const dividerRef = useRef(null)
   const origDocRef = useRef(null)
@@ -166,6 +167,9 @@ export default function Workspace({
         <div className="action-info" dangerouslySetInnerHTML={{ __html: actionInfo }} />
         {showReset && (
           <button className="btn btn-ghost" onClick={onReset}>重新開始</button>
+        )}
+        {showTexBtn && step >= 5 && (
+          <button className="btn btn-ghost" onClick={onExportTex}>下載 .tex</button>
         )}
         <button className={mainBtnCls} disabled={mainBtnDisabled} onClick={onMainAction}>
           {mainBtnTxt}
