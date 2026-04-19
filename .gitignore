@@ -39,6 +39,7 @@ Thumbs.db
 # Output / temp files
 output/
 *.docx
+!templates/*.docx
 *.log
 
 .claude/
